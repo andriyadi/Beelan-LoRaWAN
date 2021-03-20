@@ -45,7 +45,6 @@
 *****************************************************************************************
 */
 
-
 /*
 *****************************************************************************************
 * Description : Function that handles a send and receive cycle with timing for receive slots.
@@ -62,65 +61,69 @@
 *****************************************************************************************
 */
 void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, sLoRa_Session *Session_Data,
- 									sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message_Rx, sSettings *LoRa_Settings)
+				sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message_Rx, sSettings *LoRa_Settings)
 {
 	static const unsigned int Receive_Delay_1 = 1000;
-	static const unsigned int Receive_Delay_2 = 1000;
+	static const unsigned int Receive_Delay_2 = 2000; //1000;
 	unsigned long prevTime = 0;
 
-  //Transmit
-  if(*RFM_Command == NEW_RFM_COMMAND)
-  {
-    //Lora send data
-    LORA_Send_Data(Data_Tx, Session_Data, LoRa_Settings);
-	prevTime = millis();
-		// Class C open RX2 immediately after sending data
-	if(LoRa_Settings->Mote_Class == 0x01)
+	//Transmit
+	if (*RFM_Command == NEW_RFM_COMMAND)
 	{
-	// RX2 window
-	//LoRa_Settings->Channel_Rx = Channel_Rx_2;    // set Rx2 channel
-	//LoRa_Settings->Datarate_Rx = Datarate_Rx_2;   //set data rate Rx2
-	LORA_Receive_Data(Data_Rx, Session_Data, OTAA_Data, Message_Rx, LoRa_Settings);
-	if(Data_Rx->Counter > 0) {
-		Serial.print((char *)Data_Rx->Data);
-	} else {
-		Serial.println("No Data RX2 Class C");
-	}
-	}
+		//Lora send data
+		LORA_Send_Data(Data_Tx, Session_Data, LoRa_Settings);
+		prevTime = millis();
+		// Class C open RX2 immediately after sending data
+		if (LoRa_Settings->Mote_Class == 0x01)
+		{
+			// RX2 window
+			//LoRa_Settings->Channel_Rx = Channel_Rx_2;    // set Rx2 channel
+			//LoRa_Settings->Datarate_Rx = Datarate_Rx_2;   //set data rate Rx2
+			LORA_Receive_Data(Data_Rx, Session_Data, OTAA_Data, Message_Rx, LoRa_Settings);
+			if (Data_Rx->Counter > 0)
+			{
+				Serial.print((char *)Data_Rx->Data);
+			}
+			else
+			{
+				Serial.println("No Data RX2 Class C");
+			}
+		}
 
-    *RFM_Command = NO_RFM_COMMAND;
-  }
+		*RFM_Command = NO_RFM_COMMAND;
+	}
 
 	// wait rx1 window
-  while((digitalRead(RFM_pins.DIO0) != HIGH) && (millis() - prevTime < Receive_Delay_1))
-    {
-	#if defined(ESP8266) || defined(ESP32) 
-	yield();
-	#endif
-    };
+	while ((digitalRead(RFM_pins.DIO0) != HIGH) && (millis() - prevTime < Receive_Delay_1))
+	{
+#if defined(ESP8266) || defined(ESP32)
+		yield();
+#endif
+	};
 
-  //Get data
-  LORA_Receive_Data(Data_Rx, Session_Data, OTAA_Data, Message_Rx, LoRa_Settings);
-  *RFM_Command = NO_RFM_COMMAND;
-	
-	if (Data_Rx->Counter==0)
+	//Get data
+	LORA_Receive_Data(Data_Rx, Session_Data, OTAA_Data, Message_Rx, LoRa_Settings);
+	*RFM_Command = NO_RFM_COMMAND;
+
+	if (Data_Rx->Counter == 0)
 	{
 		// wait rx2 window
-		while((digitalRead(RFM_pins.DIO0) != HIGH) && (millis() - prevTime < Receive_Delay_2));
+		while ((digitalRead(RFM_pins.DIO0) != HIGH) && (millis() - prevTime < Receive_Delay_2))
+			;
 
-		//Get data
-		// TODO
-		// The RX2 receive window uses a fixed frequency and data rate. The default parameters are 
-		// 869.525 MHz / DR0 (SF12, 125 kHz) 
+			//Get data
+			// TODO
+			// The RX2 receive window uses a fixed frequency and data rate. The default parameters are
+			// 869.525 MHz / DR0 (SF12, 125 kHz)
 
-	#ifdef EU_868
-		unsigned char previousChannelRX=LoRa_Settings->Channel_Rx;
-		unsigned char previousDatarateRX=LoRa_Settings->Datarate_Rx;
-		LoRa_Settings->Channel_Rx=CHRX2;
-		LoRa_Settings->Datarate_Rx=SF9BW125;
-		LoRa_Settings->Channel_Rx=previousChannelRX;
-		LoRa_Settings->Datarate_Rx=previousDatarateRX;
-	#endif
+#ifdef EU_868
+		unsigned char previousChannelRX = LoRa_Settings->Channel_Rx;
+		unsigned char previousDatarateRX = LoRa_Settings->Datarate_Rx;
+		LoRa_Settings->Channel_Rx = CHRX2;
+		LoRa_Settings->Datarate_Rx = SF9BW125;
+		LoRa_Settings->Channel_Rx = previousChannelRX;
+		LoRa_Settings->Datarate_Rx = previousDatarateRX;
+#endif
 		LORA_Receive_Data(Data_Rx, Session_Data, OTAA_Data, Message_Rx, LoRa_Settings);
 		*RFM_Command = NO_RFM_COMMAND;
 	}
@@ -137,124 +140,121 @@ void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, 
 */
 void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *LoRa_Settings)
 {
-  //Define variables
-  unsigned char i;
+	//Define variables
+	unsigned char i;
 
-  //Initialise RFM buffer
-  unsigned char RFM_Data[MAX_UPLINK_PAYLOAD_SIZE+65];
-  sBuffer RFM_Package = {&RFM_Data[0], 0x00};
+	//Initialise RFM buffer
+	unsigned char RFM_Data[MAX_UPLINK_PAYLOAD_SIZE + 65];
+	sBuffer RFM_Package = {&RFM_Data[0], 0x00};
 
-  //Initialise Message struct for a transmit message
-  sLoRa_Message Message;
+	//Initialise Message struct for a transmit message
+	sLoRa_Message Message;
 
-  Message.MAC_Header = 0x00;
-  Message.Frame_Port = 0x01; //Frame port always 1 for now
-  Message.Frame_Control = 0x00;
+	Message.MAC_Header = 0x00;
+	Message.Frame_Port = 0x01; //Frame port always 1 for now
+	Message.Frame_Control = 0x00;
 
-  //Load device address from session data into the message
-  Message.DevAddr[0] = Session_Data->DevAddr[0];
-  Message.DevAddr[1] = Session_Data->DevAddr[1];
-  Message.DevAddr[2] = Session_Data->DevAddr[2];
-  Message.DevAddr[3] = Session_Data->DevAddr[3];
+	//Load device address from session data into the message
+	Message.DevAddr[0] = Session_Data->DevAddr[0];
+	Message.DevAddr[1] = Session_Data->DevAddr[1];
+	Message.DevAddr[2] = Session_Data->DevAddr[2];
+	Message.DevAddr[3] = Session_Data->DevAddr[3];
 
-  //Set up direction
-  Message.Direction = 0x00;
+	//Set up direction
+	Message.Direction = 0x00;
 
-  //Load the frame counter from the session data into the message
-  Message.Frame_Counter = *Session_Data->Frame_Counter;
+	//Load the frame counter from the session data into the message
+	Message.Frame_Counter = *Session_Data->Frame_Counter;
 
-  //Set confirmation
-  //Unconfirmed
-  if(LoRa_Settings->Confirm == 0x00)
-  {
-      Message.MAC_Header = Message.MAC_Header | 0x40;
-  }
-  //Confirmed
-  else
-  {
-      Message.MAC_Header = Message.MAC_Header | 0x80;
-  }
+	//Set confirmation
+	//Unconfirmed
+	if (LoRa_Settings->Confirm == 0x00)
+	{
+		Message.MAC_Header = Message.MAC_Header | 0x40;
+	}
+	//Confirmed
+	else
+	{
+		Message.MAC_Header = Message.MAC_Header | 0x80;
+	}
 
-  //Build the Radio Package
-  //Load mac header
-  RFM_Package.Data[0] = Message.MAC_Header;
+	//Build the Radio Package
+	//Load mac header
+	RFM_Package.Data[0] = Message.MAC_Header;
 
-  //Load device address
-  RFM_Package.Data[1] = Message.DevAddr[3];
-  RFM_Package.Data[2] = Message.DevAddr[2];
-  RFM_Package.Data[3] = Message.DevAddr[1];
-  RFM_Package.Data[4] = Message.DevAddr[0];
+	//Load device address
+	RFM_Package.Data[1] = Message.DevAddr[3];
+	RFM_Package.Data[2] = Message.DevAddr[2];
+	RFM_Package.Data[3] = Message.DevAddr[1];
+	RFM_Package.Data[4] = Message.DevAddr[0];
 
-  //Load frame control
-  RFM_Package.Data[5] = Message.Frame_Control;
+	//Load frame control
+	RFM_Package.Data[5] = Message.Frame_Control;
 
-  //Load frame counter
-  RFM_Package.Data[6] = (*Session_Data->Frame_Counter & 0x00FF);
-  RFM_Package.Data[7] = ((*Session_Data->Frame_Counter >> 8) & 0x00FF);
+	//Load frame counter
+	RFM_Package.Data[6] = (*Session_Data->Frame_Counter & 0x00FF);
+	RFM_Package.Data[7] = ((*Session_Data->Frame_Counter >> 8) & 0x00FF);
 
-  //Set data counter to 8
-  RFM_Package.Counter = 8;
+	//Set data counter to 8
+	RFM_Package.Counter = 8;
 
-  //If there is data load the Frame_Port field
-  //Encrypt the data and load the data
-  if(Data_Tx->Counter > 0x00)
-  {
-	//Load Frame port field
-    //RFM_Data[8] = Message.Frame_Port;
-	RFM_Package.Data[8] = LoRa_Settings->Mport;
+	//If there is data load the Frame_Port field
+	//Encrypt the data and load the data
+	if (Data_Tx->Counter > 0x00)
+	{
+		//Load Frame port field
+		//RFM_Data[8] = Message.Frame_Port;
+		RFM_Package.Data[8] = LoRa_Settings->Mport;
 
-    //Raise package counter
-    RFM_Package.Counter++;
+		//Raise package counter
+		RFM_Package.Counter++;
 
-    //Encrypt the data
-    Encrypt_Payload(Data_Tx, Session_Data->AppSKey, &Message);
+		//Encrypt the data
+		Encrypt_Payload(Data_Tx, Session_Data->AppSKey, &Message);
 
-    //Load Data
-    for(i = 0; i < Data_Tx->Counter; i++)
-    {
-      RFM_Package.Data[RFM_Package.Counter++] = Data_Tx->Data[i];
-    }
+		//Load Data
+		for (i = 0; i < Data_Tx->Counter; i++)
+		{
+			RFM_Package.Data[RFM_Package.Counter++] = Data_Tx->Data[i];
+		}
+	}
 
+	//Calculate MIC
+	Construct_Data_MIC(&RFM_Package, Session_Data, &Message);
 
-  }
+	//Load MIC in package
+	for (i = 0; i < 4; i++)
+	{
+		RFM_Package.Data[RFM_Package.Counter++] = Message.MIC[i];
+	}
 
-  //Calculate MIC
-  Construct_Data_MIC(&RFM_Package, Session_Data, &Message);
+	//Send Package
+	RFM_Send_Package(&RFM_Package, LoRa_Settings);
 
-  //Load MIC in package
-  for(i = 0; i < 4; i++)
-  {
-    RFM_Package.Data[RFM_Package.Counter++] = Message.MIC[i];
-  }
+	//Raise Frame counter
+	if (*Session_Data->Frame_Counter != 0xFFFF)
+	{
+		//Raise frame counter
+		*Session_Data->Frame_Counter = *Session_Data->Frame_Counter + 1;
+	}
+	else
+	{
+		*Session_Data->Frame_Counter = 0x0000;
+	}
 
-  //Send Package
-  RFM_Send_Package(&RFM_Package, LoRa_Settings);
-
-  //Raise Frame counter
-  if(*Session_Data->Frame_Counter != 0xFFFF)
-  {
-    //Raise frame counter
-    *Session_Data->Frame_Counter = *Session_Data->Frame_Counter + 1;
-  }
-  else
-  {
-    *Session_Data->Frame_Counter = 0x0000;
-  }
-
-  //Change channel for next message if hopping is activated
-  if(LoRa_Settings->Channel_Hopping == 0x01)
-  {
-    if(LoRa_Settings->Channel_Tx < 0x07)
-    {
-      LoRa_Settings->Channel_Tx++;
-    }
-    else
-    {
-      LoRa_Settings->Channel_Tx = 0x00;
-    }
-  }
+	//Change channel for next message if hopping is activated
+	if (LoRa_Settings->Channel_Hopping == 0x01)
+	{
+		if (LoRa_Settings->Channel_Tx < 0x07)
+		{
+			LoRa_Settings->Channel_Tx++;
+		}
+		else
+		{
+			LoRa_Settings->Channel_Tx = 0x00;
+		}
+	}
 }
-
 
 /*
 *****************************************************************************************
@@ -273,12 +273,12 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 {
 	unsigned char i;
 
-    //Initialise RFM buffer
-	unsigned char RFM_Data[MAX_DOWNLINK_PAYLOAD_SIZE+65];
+	//Initialise RFM buffer
+	unsigned char RFM_Data[MAX_DOWNLINK_PAYLOAD_SIZE + 65];
 	sBuffer RFM_Package = {&RFM_Data[0], 0x00};
 
 	unsigned char MIC_Check;
-  	unsigned char Address_Check;
+	unsigned char Address_Check;
 
 	unsigned char Frame_Options_Length;
 
@@ -287,9 +287,9 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 	message_t Message_Status = NO_MESSAGE;
 
 	//If it is a type A device switch RFM to single receive
-	if(LoRa_Settings->Mote_Class == CLASS_A)
+	if (LoRa_Settings->Mote_Class == CLASS_A)
 	{
-		Message_Status = RFM_Single_Receive(LoRa_Settings);  
+		Message_Status = RFM_Single_Receive(LoRa_Settings);
 	}
 	else
 	{
@@ -300,12 +300,12 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 	}
 
 	//If there is a message received get the data from the RFM
-	if(Message_Status == NEW_MESSAGE)
+	if (Message_Status == NEW_MESSAGE)
 	{
 		Message_Status = RFM_Get_Package(&RFM_Package);
 
 		//If mote class C switch RFM back to continuous receive
-		if(LoRa_Settings->Mote_Class == CLASS_C)
+		if (LoRa_Settings->Mote_Class == CLASS_C)
 		{
 			//Switch RFM to Continuous Receive
 			RFM_Continuous_Receive(LoRa_Settings);
@@ -313,13 +313,13 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 	}
 
 	//if CRC ok breakdown package
-	if(Message_Status == CRC_OK)
+	if (Message_Status == CRC_OK)
 	{
 		//Get MAC_Header
-    	Message->MAC_Header = RFM_Data[0];
+		Message->MAC_Header = RFM_Data[0];
 
 		//Data message
-		if(Message->MAC_Header == 0x40 || Message->MAC_Header == 0x60 || Message->MAC_Header == 0x80 || Message->MAC_Header == 0xA0)
+		if (Message->MAC_Header == 0x40 || Message->MAC_Header == 0x60 || Message->MAC_Header == 0x80 || Message->MAC_Header == 0xA0)
 		{
 			//Get device address from received data
 			Message->DevAddr[0] = RFM_Data[4];
@@ -330,7 +330,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 			//Get frame control field
 			Message->Frame_Control = RFM_Data[5];
 
-			 //Get frame counter
+			//Get frame counter
 			Message->Frame_Counter = RFM_Data[7];
 			Message->Frame_Counter = (Message->Frame_Counter << 8) + RFM_Data[6];
 
@@ -342,51 +342,51 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 
 			MIC_Check = 0x00;
 
-            //Compare MIC
-			for(i = 0x00; i < 4; i++)
+			//Compare MIC
+			for (i = 0x00; i < 4; i++)
 			{
-				if(RFM_Data[RFM_Package.Counter + i] == Message->MIC[i])
+				if (RFM_Data[RFM_Package.Counter + i] == Message->MIC[i])
 				{
 					MIC_Check++;
 				}
 			}
 
 			//Check MIC
-      		if(MIC_Check == 0x04)
-      		{
-      		  Message_Status = MIC_OK;
-      		}
-      		else
-      		{
-      		  Message_Status = WRONG_MESSAGE;
-      		}
-
-      		Address_Check = 0;
-
-      		//Check address
-      		if(MIC_Check == 0x04)
-      		{
-			      for(i = 0x00; i < 4; i++)
-			      {
-			        if(Session_Data->DevAddr[i] == Message->DevAddr[i])
-			        {
-				        Address_Check++;
-			        }
-			      }
-      		}
-
-		  	if(Address_Check == 0x04)
-		  	{
-				Message_Status = ADDRESS_OK;
-		  	}
-		  	else
-		  	{
+			if (MIC_Check == 0x04)
+			{
+				Message_Status = MIC_OK;
+			}
+			else
+			{
 				Message_Status = WRONG_MESSAGE;
-		  	}
+			}
+
+			Address_Check = 0;
+
+			//Check address
+			if (MIC_Check == 0x04)
+			{
+				for (i = 0x00; i < 4; i++)
+				{
+					if (Session_Data->DevAddr[i] == Message->DevAddr[i])
+					{
+						Address_Check++;
+					}
+				}
+			}
+
+			if (Address_Check == 0x04)
+			{
+				Message_Status = ADDRESS_OK;
+			}
+			else
+			{
+				Message_Status = WRONG_MESSAGE;
+			}
 
 			//if the address is OK then decrypt the data
 			//Send the data to USB
-			if(Message_Status == ADDRESS_OK)
+			if (Message_Status == ADDRESS_OK)
 			{
 
 				Data_Location = 8;
@@ -398,7 +398,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 				Data_Location = Data_Location + Frame_Options_Length;
 
 				//Check if ther is data in the package
-				if(RFM_Package.Counter == Data_Location)
+				if (RFM_Package.Counter == Data_Location)
 				{
 					Data_Rx->Counter = 0x00;
 				}
@@ -408,39 +408,39 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 					Message->Frame_Port = RFM_Data[8];
 
 					//Calculate the amount of data in the package
-					Data_Rx->Counter = (RFM_Package.Counter - Data_Location -1);
+					Data_Rx->Counter = (RFM_Package.Counter - Data_Location - 1);
 
 					//Correct the data location by 1 for the Fport field
 					Data_Location = (Data_Location + 1);
 				}
 
 				//Copy and decrypt the data
-				if(Data_Rx->Counter != 0x00)
+				if (Data_Rx->Counter != 0x00)
 				{
-					for(i = 0; i < Data_Rx->Counter; i++)
+					for (i = 0; i < Data_Rx->Counter; i++)
 					{
 						Data_Rx->Data[i] = RFM_Data[Data_Location + i];
 					}
 
-         //Check frame port fiels. When zero it is a mac command message encrypted with NwkSKey
-         if(Message->Frame_Port == 0x00)
-         {
-          Encrypt_Payload(Data_Rx, Session_Data->NwkSKey, Message);
-         }
-         else
-         {
-          Encrypt_Payload(Data_Rx, Session_Data->AppSKey, Message);
-         }
+					//Check frame port fiels. When zero it is a mac command message encrypted with NwkSKey
+					if (Message->Frame_Port == 0x00)
+					{
+						Encrypt_Payload(Data_Rx, Session_Data->NwkSKey, Message);
+					}
+					else
+					{
+						Encrypt_Payload(Data_Rx, Session_Data->AppSKey, Message);
+					}
 
 					Message_Status = MESSAGE_DONE;
 				}
 			}
 		}
 
-		if(Message_Status == WRONG_MESSAGE)
+		if (Message_Status == WRONG_MESSAGE)
 		{
 			Data_Rx->Counter = 0x00;
- 		}
+		}
 	}
 }
 /*
@@ -453,12 +453,12 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 */
 static void Generate_DevNonce(unsigned char *DevNonce)
 {
-  unsigned int RandNumber;
+	unsigned int RandNumber;
 
-  RandNumber = random(0xFFFF);
+	RandNumber = random(0xFFFF);
 
-  DevNonce[0] = RandNumber & 0x00FF;
-  DevNonce[1] = (RandNumber >> 8) & 0x00FF;
+	DevNonce[0] = RandNumber & 0x00FF;
+	DevNonce[1] = (RandNumber >> 8) & 0x00FF;
 }
 /*
 *****************************************************************************************
@@ -470,64 +470,64 @@ static void Generate_DevNonce(unsigned char *DevNonce)
 */
 void LoRa_Send_JoinReq(sLoRa_OTAA *OTAA_Data, sSettings *LoRa_Settings)
 {
-    unsigned char i;
+	unsigned char i;
 
 	//Initialise RFM data buffer
-    unsigned char RFM_Data[23];
-    sBuffer RFM_Package = { &RFM_Data[0], 0x00};
+	unsigned char RFM_Data[23];
+	sBuffer RFM_Package = {&RFM_Data[0], 0x00};
 
- 	//Initialise message sturct
-    sLoRa_Message Message;
+	//Initialise message sturct
+	sLoRa_Message Message;
 
-    Message.MAC_Header = 0x00; //Join request
-    Message.Direction = 0x00; //Set up Direction
+	Message.MAC_Header = 0x00; //Join request
+	Message.Direction = 0x00;  //Set up Direction
 
-    //Construct OTAA Request message
-    //Load Header in package
-    RFM_Data[0] = Message.MAC_Header;
+	//Construct OTAA Request message
+	//Load Header in package
+	RFM_Data[0] = Message.MAC_Header;
 
-    //Load AppEUI in package
-    for(i = 0x00; i < 8; i++)
-    {
-        RFM_Data[i+1] = OTAA_Data->AppEUI[7-i];
-    }
+	//Load AppEUI in package
+	for (i = 0x00; i < 8; i++)
+	{
+		RFM_Data[i + 1] = OTAA_Data->AppEUI[7 - i];
+	}
 
-    //Load DevEUI in package
-    for(i= 0x00; i < 8; i++)
-    {
-        RFM_Data[i+9] = OTAA_Data->DevEUI[7-i];
-    }
+	//Load DevEUI in package
+	for (i = 0x00; i < 8; i++)
+	{
+		RFM_Data[i + 9] = OTAA_Data->DevEUI[7 - i];
+	}
 
-    //Generate DevNonce
-    Generate_DevNonce(OTAA_Data->DevNonce);
+	//Generate DevNonce
+	Generate_DevNonce(OTAA_Data->DevNonce);
 
-    //Load DevNonce in package
-    RFM_Data[17] = OTAA_Data->DevNonce[0];
-    RFM_Data[18] = OTAA_Data->DevNonce[1];
+	//Load DevNonce in package
+	RFM_Data[17] = OTAA_Data->DevNonce[0];
+	RFM_Data[18] = OTAA_Data->DevNonce[1];
 
-    //Set length of package
-    RFM_Package.Counter = 19;
+	//Set length of package
+	RFM_Package.Counter = 19;
 
-    //Get MIC	
-    Calculate_MIC(&RFM_Package, OTAA_Data->AppKey, &Message);
+	//Get MIC
+	Calculate_MIC(&RFM_Package, OTAA_Data->AppKey, &Message);
 
-    //Load MIC in package
-    RFM_Data[19] = Message.MIC[0];
-    RFM_Data[20] = Message.MIC[1];
-    RFM_Data[21] = Message.MIC[2];
-    RFM_Data[22] = Message.MIC[3];
+	//Load MIC in package
+	RFM_Data[19] = Message.MIC[0];
+	RFM_Data[20] = Message.MIC[1];
+	RFM_Data[21] = Message.MIC[2];
+	RFM_Data[22] = Message.MIC[3];
 
-    //Set length of package to the right length
-    RFM_Package.Counter = 23;
+	//Set length of package to the right length
+	RFM_Package.Counter = 23;
 
-    //Send Package
-    RFM_Send_Package(&RFM_Package, LoRa_Settings);
+	//Send Package
+	RFM_Send_Package(&RFM_Package, LoRa_Settings);
 }
-bool LORA_join_Accept(sBuffer *Data_Rx,sLoRa_Session *Session_Data, sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message, sSettings *LoRa_Settings)
+bool LORA_join_Accept(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message, sSettings *LoRa_Settings)
 {
 	bool joinStatus = false;
 	unsigned char i;
-    //Initialise RFM buffer
+	//Initialise RFM buffer
 	unsigned char RFM_Data[64];
 	sBuffer RFM_Package = {&RFM_Data[0], 0x00};
 	unsigned char MIC_Check;
@@ -535,34 +535,34 @@ bool LORA_join_Accept(sBuffer *Data_Rx,sLoRa_Session *Session_Data, sLoRa_OTAA *
 	message_t Message_Status = NO_MESSAGE;
 
 	//RFM to single receive
-	Message_Status = RFM_Single_Receive(LoRa_Settings);  
+	Message_Status = RFM_Single_Receive(LoRa_Settings);
 	//If there is a message received get the data from the RFM
-	if(Message_Status == NEW_MESSAGE)
+	if (Message_Status == NEW_MESSAGE)
 		Message_Status = RFM_Get_Package(&RFM_Package);
-	
-	#if defined(ESP8266) || defined(ESP32) 
+
+#if defined(ESP8266) || defined(ESP32)
 	yield();
-	#endif
+#endif
 
 	//if CRC ok breakdown package
-	if(Message_Status == CRC_OK)
+	if (Message_Status == CRC_OK)
 	{
 		//Get MAC_Header
-    	Message->MAC_Header = RFM_Data[0];
+		Message->MAC_Header = RFM_Data[0];
 
 		//Join Accept message
-		if(Message->MAC_Header == 0x20)
-		{	
+		if (Message->MAC_Header == 0x20)
+		{
 			//Copy the data into the data array
-			for(i = 0x00; i < RFM_Package.Counter; i++)
+			for (i = 0x00; i < RFM_Package.Counter; i++)
 				Data_Rx->Data[i] = RFM_Package.Data[i];
 
 			//Set data counter
 			Data_Rx->Counter = RFM_Package.Counter;
 
 			//Decrypt the data
-			for(i = 0x00; i < ((Data_Rx->Counter - 1) / 16); i++)
-				AES_Encrypt(&(Data_Rx->Data[(i*16)+1]),OTAA_Data->AppKey);
+			for (i = 0x00; i < ((Data_Rx->Counter - 1) / 16); i++)
+				AES_Encrypt(&(Data_Rx->Data[(i * 16) + 1]), OTAA_Data->AppKey);
 
 			//Calculate MIC
 			//Remove MIC from number of bytes
@@ -575,60 +575,60 @@ bool LORA_join_Accept(sBuffer *Data_Rx,sLoRa_Session *Session_Data, sLoRa_OTAA *
 			MIC_Check = 0x00;
 
 			//Compare MIC
-			for(i = 0x00; i < 4; i++)
-				if(Data_Rx->Data[Data_Rx->Counter + i] == Message->MIC[i])
+			for (i = 0x00; i < 4; i++)
+				if (Data_Rx->Data[Data_Rx->Counter + i] == Message->MIC[i])
 					MIC_Check++;
 
 			//Check if MIC compares
-			if(MIC_Check == 0x04)
+			if (MIC_Check == 0x04)
 				Message_Status = MIC_OK;
 			else
 				Message_Status = WRONG_MESSAGE;
 
 			//Get Key's and data from package when MIC is OK
-			if(Message_Status == MIC_OK)
+			if (Message_Status == MIC_OK)
 			{
 				//Get AppNonce
-				for(i = 0; i< 3; i++)
-					OTAA_Data->AppNonce[i] = Data_Rx->Data[i+1];
+				for (i = 0; i < 3; i++)
+					OTAA_Data->AppNonce[i] = Data_Rx->Data[i + 1];
 
 				//Get Net ID
-				for(i = 0; i< 3; i++)
+				for (i = 0; i < 3; i++)
 					OTAA_Data->NetID[i] = Data_Rx->Data[i + 4];
 
 				//Get session Device address
-				for(i = 0; i< 4; i++)
-					Session_Data->DevAddr[3-i] = Data_Rx->Data[i + 7];
+				for (i = 0; i < 4; i++)
+					Session_Data->DevAddr[3 - i] = Data_Rx->Data[i + 7];
 
 				//Calculate Network Session Key
 				Session_Data->NwkSKey[0] = 0x01;
 
 				//Load AppNonce
-				for(i = 0; i < 3; i++)
-					Session_Data->NwkSKey[i+1] = OTAA_Data->AppNonce[i];
+				for (i = 0; i < 3; i++)
+					Session_Data->NwkSKey[i + 1] = OTAA_Data->AppNonce[i];
 
 				//Load NetID
-				for(i = 0; i < 3; i++)
-					Session_Data->NwkSKey[i+4] = OTAA_Data->NetID[i];
+				for (i = 0; i < 3; i++)
+					Session_Data->NwkSKey[i + 4] = OTAA_Data->NetID[i];
 
 				//Load Dev Nonce
 				Session_Data->NwkSKey[7] = OTAA_Data->DevNonce[0];
 				Session_Data->NwkSKey[8] = OTAA_Data->DevNonce[1];
 
 				//Pad with zeros
-				for(i = 9; i <= 15; i++)
+				for (i = 9; i <= 15; i++)
 					Session_Data->NwkSKey[i] = 0x00;
 
 				//Copy to AppSkey
-				for(i = 0x00; i < 16; i++)
+				for (i = 0x00; i < 16; i++)
 					Session_Data->AppSKey[i] = Session_Data->NwkSKey[i];
 
 				//Change first byte of AppSKey
 				Session_Data->AppSKey[0] = 0x02;
 
 				//Calculate the keys
-				AES_Encrypt(Session_Data->NwkSKey,OTAA_Data->AppKey);
-				AES_Encrypt(Session_Data->AppSKey,OTAA_Data->AppKey);
+				AES_Encrypt(Session_Data->NwkSKey, OTAA_Data->AppKey);
+				AES_Encrypt(Session_Data->AppSKey, OTAA_Data->AppKey);
 
 				//Reset Frame counter
 				*Session_Data->Frame_Counter = 0x0000;
@@ -638,19 +638,16 @@ bool LORA_join_Accept(sBuffer *Data_Rx,sLoRa_Session *Session_Data, sLoRa_OTAA *
 
 #ifdef DEBUG
 				Serial.print(F("NwkSKey: "));
-				for(byte i = 0; i < 16 ;++i)
-					Serial.print(Session_Data->NwkSKey[i],HEX);
+				for (byte i = 0; i < 16; ++i)
+					Serial.print(Session_Data->NwkSKey[i], HEX);
 				Serial.print(F("\nAppSKey: "));
-				for(byte i = 0; i < 16 ;++i)
-					Serial.print(Session_Data->AppSKey[i],HEX);
+				for (byte i = 0; i < 16; ++i)
+					Serial.print(Session_Data->AppSKey[i], HEX);
 				Serial.println();
-#endif	
+#endif
 				joinStatus = true;
 			}
 		}
 	}
 	return joinStatus;
 }
-
-
-

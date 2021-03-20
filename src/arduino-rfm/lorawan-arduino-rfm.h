@@ -76,9 +76,15 @@ class LoRaWANClass
         void setDataRate(unsigned char data_rate);
         void setChannel(unsigned char channel);
         unsigned char getChannel();
+        int getChannelFreq(unsigned char channel);
+        unsigned char getChannelRx();
+        int getChannelRxFreq(unsigned char channel);
         unsigned char getDataRate();
+        unsigned char getDataRateRx();
+        void setTxPower(unsigned char power_idx);
+        int getTxPower();
         void setTxPower1(unsigned char power_idx);
-        void setTxPower(int level,txPin_t pinTx);
+        void setTxPower(int level, txPin_t pinTx);
         int readData(char *outBuff);
         bool readAck(void);
         void update(void);
@@ -86,6 +92,12 @@ class LoRaWANClass
         // frame counter
         unsigned int getFrameCounter();
         void setFrameCounter(unsigned int FrameCounter);
+        unsigned int getFrameCounterRx();
+
+        // port number
+        //void setFramePortTx(unsigned int port);
+        int getFramePortRx();
+        int getFramePortTx();
 
     private:
         void randomChannel();

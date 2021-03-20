@@ -88,6 +88,7 @@ typedef struct {
     unsigned char Confirm;		//0x00 Unconfirmed, 0x01 Confirmed
     unsigned char Mport;                //Port 1-223
     unsigned char Mote_Class;		//0x00 Class A, 0x01 Class C
+    //unsigned char Frame_Port_Tx;
     unsigned char Datarate_Tx;		//See RFM file
     unsigned char Datarate_Rx;		//See RFM file
     unsigned char Channel_Tx;		//See RFM file
@@ -143,6 +144,22 @@ typedef enum {
     SF9BW500    = 0x0B,
     SF7BW500    = 0x0D
 #elif defined(EU_868)
+    SF12BW125   = 0x00,
+    SF11BW125   = 0x01,
+    SF10BW125   = 0x02,
+    SF9BW125    = 0x03,
+    SF8BW125    = 0x04,
+    SF7BW125    = 0x05,
+    SF7BW250    = 0x06
+#elif defined(AS_923)
+    SF12BW125   = 0x00,
+    SF11BW125   = 0x01,
+    SF10BW125   = 0x02,
+    SF9BW125    = 0x03,
+    SF8BW125    = 0x04,
+    SF7BW125    = 0x05,
+    SF7BW250    = 0x06
+#elif defined(AS_923_2)
     SF12BW125   = 0x00,
     SF11BW125   = 0x01,
     SF10BW125   = 0x02,
