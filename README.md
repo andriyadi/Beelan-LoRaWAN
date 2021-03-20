@@ -1,11 +1,21 @@
 ![LibraryBuild](https://github.com/BeelanMX/Beelan-LoRaWAN/workflows/LibraryBuild/badge.svg?branch=master)
-
 Arduino LoRaWAN library by Beelan
 ====================
 This repository contains the simple LoRaWAN library encapsulated to run in the generic platform, allowing using the SX1272, SX1276 transceivers and compatible modules (such as some HopeRF RFM9x modules).
 
 This repository is all based on the library originally created by Ideetron B.V. This library is slightly
 modified and this [repo]( https://git.antares.id/lorawan-loraid/arduino-loraid), with the principal purpose to have an LoRaWAN MAC layer for arduino with an easy API.
+
+# MODIFICATION
+I modify this library to comply with Indonesia's LoRaWAN regional parameter (AS923-2). To use it, make sure uncommment `#define AS_923_2` in `src/arduino-rfm/Config.h`
+```
+//LoRaWAN freq band
+// #define AS_923
+#define AS_923_2
+// #define EU_868
+// #define US_915
+// #define AU_915
+```
 
 Features
 --------
